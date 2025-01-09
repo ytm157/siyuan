@@ -95,6 +95,9 @@ export const genCardHTML = (options: {
     return `<div class="card__main">
     ${iconsHTML}
     <div class="card__block fn__flex-1 ${options.cardsData.cards.length === 0 ? "fn__none" : ""}" data-type="render"></div>
+    <div class="card__typing">
+        <textarea></textarea>
+    </div>
     <div class="card__empty card__empty--space${options.cardsData.cards.length === 0 ? "" : " fn__none"}" data-type="empty">
         <div>🔮</div>
         ${window.siyuan.languages.noDueCard}
@@ -636,6 +639,8 @@ export const bindCardEvent = async (options: {
             if (actionElements[0].classList.contains("fn__none")) {
                 type = "3";
             } else {
+                const cardTypingElement = options.element.querySelector('.card__typing') as HTMLElement;
+                cardTypingElement.classList.add("fn__none");
                 editor.protyle.element.classList.remove("card__block--hidemark", "card__block--hideli", "card__block--hidesb", "card__block--hideh");
                 actionElements[0].classList.add("fn__none");
                 actionElements[1].querySelectorAll("button.b3-button").forEach((element, btnIndex) => {
@@ -722,6 +727,43 @@ export const bindCardEvent = async (options: {
             });
         }
     });
+
+    options.element.querySelector('.card__typing textarea')
+        .addEventListener("keyup", (event: KeyboardEvent) => {
+            console.log("key up...")
+
+            const textareaValue = (event.target as HTMLTextAreaElement).value;
+            const protyle = editor.protyle;
+            const markElement = protyle.wysiwyg.element.querySelector('span[data-type~="mark"]');
+            if(markElement){
+                const markContent = markElement.textContent
+                if (markContent.toLowerCase() === textareaValue.toLowerCase()) {
+                    (event.target as HTMLTextAreaElement).value = "";
+                    const cardTypingElement = options.element.querySelector('.card__typing') as HTMLElement;
+                    cardTypingElement.classList.add("fn__none");
+                    // 显示答案 -->
+                    protyle.element.classList.remove("card__block--hidemark", "card__block--hideli", "card__block--hidesb", "card__block--hideh");
+                    actionElements[0].classList.add("fn__none");
+                    const currentCard = options.cardsData.cards[index];
+                    const type = '-1'
+                    actionElements[1].querySelectorAll("button.b3-button").forEach((element, btnIndex) => {
+                        if (btnIndex < 2) {
+                            return;
+                        }
+                        element.previousElementSibling.textContent = currentCard.nextDues[btnIndex-1];
+                    });
+                    actionElements[1].classList.remove("fn__none");
+                    emitEvent(options.app, currentCard, type);
+                    // <-- 显示答案
+                    return
+                }
+                // 输入位数正确，但是不匹配
+                if (markContent.length === textareaValue.length) {
+                    (event.target as HTMLTextAreaElement).value = "";
+                }
+            }
+        })
+
     return editor;
 };
 
@@ -816,7 +858,10 @@ const nextCard = (options: {
     cardsData: ICardData
 }) => {
     options.editor.protyle.element.classList.remove("fn__none");
-    options.editor.protyle.element.nextElementSibling.classList.add("fn__none");
+    const cardTypingElement = options.editor.protyle.element.nextElementSibling as HTMLDivElement
+    cardTypingElement.classList.remove("fn__none");
+    (cardTypingElement.firstElementChild as HTMLTextAreaElement).focus()
+    options.editor.protyle.element.nextElementSibling.nextElementSibling.classList.add("fn__none");
     options.countElement.innerHTML = genCardCount(options.cardsData, options.index);
     options.countElement.classList.remove("fn__none");
     if (options.index === 0) {
